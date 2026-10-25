@@ -96,6 +96,6 @@ export function durationLabel(mins: number): string {
 
 /** Icons offered when crafting a new recipe. */
 export const RECIPE_ICONS = [
-  '💛', '🌸', '🌊', '🧺', '🍝', '🍕', '☕', '🍰', '🎬', '🎸', '🎨', '📚',
+  '💛', '🌸', '🌊', '🧺', '🍝', '🍕', '☕', '🍺', '🍻', '🍰', '🎬', '🎸', '🎨', '📚',
   '🥾', '🚲', '🔭', '⛺', '🎲', '🍳', '🎤', '🛶', '🏖️', '🌻', '🍂', '❄️',
 ]
