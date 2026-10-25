@@ -171,8 +171,14 @@ export const useIsland = create<State>()(
         unwatch = cloud!.watchIsland(
           islandId,
           (patch) => {
+            if (patch.island === null) {
+              // The island is gone: stop listening and offer to start or join one instead.
+              detach()
+              set({ phase: 'noIsland', syncError: null })
+              return
+            }
             set(patch as Partial<State>)
-            if (patch.island !== undefined) set({ phase: patch.island ? 'ready' : 'noIsland' })
+            if (patch.island) set({ phase: 'ready' })
           },
           fail,
         )

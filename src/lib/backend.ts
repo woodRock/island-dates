@@ -234,7 +234,8 @@ function cloudBackend(app: FirebaseApp): Cloud {
             if (!s.exists() && s.metadata.fromCache) return
             cb({ island: (s.data() as Island | undefined) ?? null })
           },
-          onError,
+          // Rules deny reading an island that's been deleted (or that you don't live on): treat it as gone.
+          (err) => ((err as { code?: string }).code === 'permission-denied' ? cb({ island: null }) : onError(err)),
         ),
         ...COLLECTIONS.map((col) => {
           const q = col === 'milesLog' ? query(sub(islandId, col), orderBy('at', 'desc'), limit(150)) : sub(islandId, col)
