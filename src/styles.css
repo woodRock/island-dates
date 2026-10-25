@@ -57,6 +57,8 @@
 html,
 body {
   margin: 0;
+  /* Never let anything make the page wider than the phone: iOS Safari zooms the whole page out when it is. */
+  overflow-x: clip;
   background: var(--bg);
   background-image: radial-gradient(var(--bg-dots) 1.4px, transparent 1.6px);
   background-size: 18px 18px;
@@ -265,7 +267,7 @@ textarea {
 }
 .row-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -512,7 +514,7 @@ textarea {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 .stat {
@@ -543,7 +545,7 @@ textarea {
 
 .recipe-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 .recipe-card {
@@ -578,6 +580,8 @@ textarea {
   line-height: 1.1;
 }
 .recipe-title {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-weight: 800;
   font-size: 0.98rem;
   line-height: 1.2;
@@ -656,7 +660,7 @@ textarea {
 
 .wing-tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 .wing-tab {
@@ -693,7 +697,7 @@ textarea {
 }
 .case-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 .case {
@@ -729,6 +733,9 @@ textarea {
   font-size: 2rem;
 }
 .case-title {
+  /* Safari sizes line-clamped text at its full one-line width unless told otherwise. */
+  width: 100%;
+  overflow-wrap: anywhere;
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.15;
@@ -811,7 +818,7 @@ textarea {
 }
 .ratings-side {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 .rating-card {
@@ -935,7 +942,7 @@ textarea {
 .decor-grid {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 .decor {
@@ -1119,7 +1126,7 @@ textarea {
   border: 4px solid #e9dcbc;
   border-radius: 30px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 6px;
   box-shadow: 0 6px 20px rgba(80, 60, 30, 0.2);
   z-index: 30;
