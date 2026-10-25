@@ -17,7 +17,7 @@ To publish, run `npm run build` (it writes to `docs/`) and commit the result.
   Sign in with Google or email/password. One of you starts the island; the other joins with the six-letter
   invite code from Island settings. Everything syncs live through Firestore and works offline.
 - **Local mode** (no Firebase config): the island stays in this browser (`localStorage`, key `island-dates`),
-  with one phone rating for both residents. A local island can be moved to the cloud from the welcome screen.
+  with one phone rating for both residents.
 
 Firestore layout:
 

@@ -1,20 +1,19 @@
 import { motion } from 'framer-motion'
-import { useMemo, useState, type FormEvent } from 'react'
-import type { Hemisphere, Island } from '../game/types'
+import { useState, type FormEvent } from 'react'
+import type { Hemisphere } from '../game/types'
 import { cleanCode, cloud, type Invite } from '../lib/backend'
-import { readLocalIsland, useIsland } from '../store'
+import { useIsland } from '../store'
 import { IslandScene } from '../ui/IslandArt'
 import { useClock } from '../ui/hooks'
 import { Villager } from '../ui/kit'
 
-type Step = 'choose' | 'create' | 'join' | 'import'
+type Step = 'choose' | 'create' | 'join'
 
-/** Shown when there's no island yet: start one, join your partner's with a code, or bring the one on this phone. */
+/** Shown when there's no island yet: start one, or join your partner's with a code. */
 export function Welcome() {
   const mode = useIsland((s) => s.mode)
   const user = useIsland((s) => s.user)
   const signOut = useIsland((s) => s.signOut)
-  const local = useMemo(() => (mode === 'cloud' ? readLocalIsland() : null), [mode])
   const [step, setStep] = useState<Step>(mode === 'cloud' ? 'choose' : 'create')
   const { tod } = useClock()
 
@@ -36,17 +35,11 @@ export function Welcome() {
             <button className="btn big" onClick={() => setStep('join')}>
               ✉️ I have an invite code
             </button>
-            {local && (
-              <button className="btn" onClick={() => setStep('import')}>
-                📦 Bring {local.island!.name} from this phone
-              </button>
-            )}
           </div>
         </>
       )}
       {step === 'create' && <CreateIsland onBack={mode === 'cloud' ? () => setStep('choose') : undefined} />}
       {step === 'join' && <JoinIsland onBack={() => setStep('choose')} />}
-      {step === 'import' && local && <ImportIsland local={local.island!} onBack={() => setStep('choose')} />}
 
       {mode === 'cloud' && (
         <button className="btn ghost small" onClick={signOut}>
@@ -205,35 +198,6 @@ function JoinIsland({ onBack }: { onBack(): void }) {
           Back
         </button>
       </form>
-    </>
-  )
-}
-
-function ImportIsland({ local, onBack }: { local: Island; onBack(): void }) {
-  const importLocalIsland = useIsland((s) => s.importLocalIsland)
-  const [as, setAs] = useState(local.members[0].id)
-  const { busy, error, run } = useSubmit()
-  return (
-    <>
-      <Villager who="nook">
-        I'll have your whole island, {local.name}, shipped over. Every recipe, memory and mile! Which resident are you?
-      </Villager>
-      <div className="card form">
-        <div className="segmented">
-          {local.members.map((m) => (
-            <button key={m.id} type="button" className={as === m.id ? 'on' : ''} onClick={() => setAs(m.id)}>
-              {m.name}
-            </button>
-          ))}
-        </div>
-        <button className="btn primary big" disabled={busy} onClick={() => run(() => importLocalIsland(as), "Hm, the move didn't finish. Check your connection and try again?")}>
-          {busy ? 'Shipping boxes…' : 'Move it to the cloud ☁️'}
-        </button>
-        {error && <p className="form-error">{error}</p>}
-        <button type="button" className="btn ghost small" onClick={onBack}>
-          Back
-        </button>
-      </div>
     </>
   )
 }

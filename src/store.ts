@@ -58,8 +58,6 @@ interface State extends IslandData {
   clearSyncError(): void
 
   createIsland(name: string, names: [string, string], hemisphere: Hemisphere): Promise<void>
-  /** Uploads the island saved in this browser (Phase 1) as a new shared island; `as` is which resident you are. */
-  importLocalIsland(as: PlayerId): Promise<void>
   joinIsland(invite: Invite, name: string): Promise<void>
   signOut(): Promise<void>
   updateIsland(patch: Partial<Pick<Island, 'name' | 'hemisphere'>>, names?: [string, string]): void
@@ -103,39 +101,8 @@ const empty = (): IslandData => ({ island: null, ...noContents() })
 
 export const isDonated = (m: Memory, members: Member[]) => members.every((p) => m.ratings[p.id] != null)
 
-// ── The Phase 1 island saved in this browser ────────────────────────────────
-
 const LOCAL_KEY = 'island-dates'
-const IMPORTED_KEY = 'island-dates.imported'
 const photoKey = (id: string) => `island-dates.photo.${id}`
-
-/** The island saved locally, if there is one that hasn't been moved to the cloud yet. */
-export function readLocalIsland(): IslandData | null {
-  try {
-    if (localStorage.getItem(IMPORTED_KEY)) return null
-    const saved = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? 'null')?.state as IslandData | undefined
-    return saved?.island ? { ...noContents(), ...saved } : null
-  } catch {
-    return null
-  }
-}
-
-/** Swaps one resident id for another everywhere it's recorded. */
-function rekey(data: IslandData, from: PlayerId, to: PlayerId): IslandData {
-  const swap = <T extends PlayerId | undefined>(id: T) => (id === from ? to : id) as T
-  return {
-    ...data,
-    island: data.island && { ...data.island, members: data.island.members.map((m) => ({ ...m, id: swap(m.id) })) },
-    memories: data.memories.map((m) => ({
-      ...m,
-      createdBy: swap(m.createdBy),
-      ratings: Object.fromEntries(Object.entries(m.ratings).map(([k, v]) => [swap(k), v])),
-    })),
-    redemptions: data.redemptions.map((r) => ({ ...r, uid: swap(r.uid) })),
-    recipes: data.recipes.map((r) => ({ ...r, createdBy: swap(r.createdBy) })),
-    rewards: data.rewards.map((r) => ({ ...r, createdBy: swap(r.createdBy) })),
-  }
-}
 
 let initialized = false
 let unwatch: (() => void) | null = null
@@ -288,18 +255,6 @@ export const useIsland = create<State>()(
           )
           if (cloud) await upload(data)
           else set({ ...data, phase: 'ready', me })
-        },
-
-        async importLocalIsland(as) {
-          const local = readLocalIsland()
-          const { user } = get()
-          if (!local || !user) return
-          await upload(rekey(local, as, user.uid))
-          try {
-            localStorage.setItem(IMPORTED_KEY, get().islandId ?? 'yes')
-          } catch {
-            /* worst case it's offered again */
-          }
         },
 
         async joinIsland(invite, name) {
