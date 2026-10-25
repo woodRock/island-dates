@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Only an island's two residents can read or write it. A partner joins with an invite code,
+// which lets them add themselves to an island that has exactly one resident so far.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function islandPath(id) {
+      return /databases/$(database)/documents/islands/$(id);
+    }
+    function isMember(id) {
+      return signedIn() && request.auth.uid in get(islandPath(id)).data.memberUids;
+    }
+
+    // Which island each person lives on.
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Looked up by code (never listed). Created alongside its island, deleted once used.
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && request.auth.uid in getAfter(islandPath(request.resource.data.islandId)).data.memberUids;
+      allow delete: if isMember(resource.data.islandId);
+    }
+
+    match /islands/{islandId} {
+      allow get: if signedIn() && request.auth.uid in resource.data.memberUids;
+
+      allow create: if signedIn()
+        && request.resource.data.memberUids == [request.auth.uid]
+        && request.resource.data.members is list
+        && request.resource.data.members.size() == 2;
+
+      // Residents can change anything except who lives here.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.memberUids
+        && request.resource.data.memberUids == resource.data.memberUids;
+
+      // Joining: the second resident adds themselves, and nothing else.
+      allow update: if signedIn()
+        && resource.data.memberUids.size() == 1
+        && !(request.auth.uid in resource.data.memberUids)
+        && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids']);
+
+      // recipes, memories, rewards, redemptions, islandItems, milesLog, photos
+      match /{collection}/{docId} {
+        allow read, write: if isMember(islandId);
+      }
+    }
+  }
+}
