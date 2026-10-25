@@ -83,6 +83,8 @@ export interface Cloud {
   createIsland(user: User, island: Omit<Island, 'memberUids' | 'inviteCode'>, contents: IslandContents): Promise<string>
   lookupInvite(code: string): Promise<Invite | null>
   joinIsland(user: User, invite: Invite, name: string): Promise<void>
+  /** Permanently deletes the island and everything on it, for both residents. */
+  deleteIsland(user: User, islandId: string): Promise<void>
   watchIsland(islandId: string, cb: (patch: Partial<IslandContents> & { island?: Island | null }) => void, onError: (e: Error) => void): () => void
   sink(islandId: string, onError: (e: Error) => void): Sink
   loadPhoto(islandId: string, memoryId: string): Promise<string | null>
@@ -223,6 +225,19 @@ function cloudBackend(app: FirebaseApp): Cloud {
         await inBatches(db, ops)
       }
       await deleteDoc(doc(db, 'invites', invite.code))
+    },
+
+    async deleteIsland(user, islandId) {
+      const island = (await getDoc(islandRef(islandId))).data() as Island | undefined
+      // Contents first: rules check membership against the island doc, so it has to go last.
+      const ops: ((b: ReturnType<typeof writeBatch>) => void)[] = []
+      for (const col of [...COLLECTIONS, 'photos'] as const) {
+        for (const d of (await getDocs(sub(islandId, col))).docs) ops.push((b) => b.delete(d.ref))
+      }
+      await inBatches(db, ops)
+      if (island?.inviteCode) await deleteDoc(doc(db, 'invites', island.inviteCode))
+      await deleteDoc(islandRef(islandId))
+      await deleteDoc(doc(db, 'users', user.uid))
     },
 
     watchIsland(islandId, cb, onError) {

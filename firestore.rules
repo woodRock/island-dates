@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Only an island's two residents can read or write it. A partner joins with an invite code,
+// Only an island's two residents can read, write or delete it. A partner joins with an invite code,
 // which lets them add themselves to an island that has exactly one resident so far.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -46,6 +46,9 @@ service cloud.firestore {
         && !(request.auth.uid in resource.data.memberUids)
         && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids']);
+
+      // Either resident can close the island for good (the app empties its collections first).
+      allow delete: if signedIn() && request.auth.uid in resource.data.memberUids;
 
       // recipes, memories, rewards, redemptions, islandItems, milesLog, photos
       match /{collection}/{docId} {

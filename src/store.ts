@@ -62,7 +62,8 @@ interface State extends IslandData {
   signOut(): Promise<void>
   updateIsland(patch: Partial<Pick<Island, 'name' | 'hemisphere'>>, names?: [string, string]): void
   setTheme(theme: ThemePref): void
-  resetIsland(): void
+  /** Deletes the island for good: from Firestore for both of you, or from this browser in local mode. */
+  deleteIsland(): Promise<void>
 
   saveRecipe(recipe: Omit<Recipe, 'id' | 'source'> & { id?: string }): void
   deleteRecipe(id: string): void
@@ -281,7 +282,22 @@ export const useIsland = create<State>()(
         },
 
         setTheme: (theme) => set({ theme }),
-        resetIsland: () => set({ ...empty(), tab: 'island', phase: 'noIsland' }),
+        async deleteIsland() {
+          const { user, islandId } = get()
+          if (cloud && user && islandId) {
+            // Stop listening first, so the deletions don't show up as sync errors.
+            unwatch?.()
+            unwatch = null
+            try {
+              await cloud.deleteIsland(user, islandId)
+            } catch (err) {
+              attach(islandId)
+              throw err
+            }
+            detach()
+          }
+          set({ ...empty(), tab: 'island', phase: 'noIsland', syncError: null })
+        },
 
         saveRecipe({ id, ...fields }) {
           const existing = id && get().recipes.find((r) => r.id === id)

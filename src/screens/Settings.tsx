@@ -8,7 +8,6 @@ export function Settings({ open, onClose }: { open: boolean; onClose(): void }) 
   const theme = useIsland((s) => s.theme)
   const updateIsland = useIsland((s) => s.updateIsland)
   const setTheme = useIsland((s) => s.setTheme)
-  const resetIsland = useIsland((s) => s.resetIsland)
   const mode = useIsland((s) => s.mode)
   const user = useIsland((s) => s.user)
   const me = useIsland((s) => s.me)
@@ -18,7 +17,6 @@ export function Settings({ open, onClose }: { open: boolean; onClose(): void }) 
   const [name, setName] = useState(island.name)
   const [a, setA] = useState(island.members[0].name)
   const [b, setB] = useState(island.members[1].name)
-  const [confirmReset, setConfirmReset] = useState(false)
 
   // Start from the saved names each time the sheet opens.
   useEffect(() => {
@@ -27,7 +25,6 @@ export function Settings({ open, onClose }: { open: boolean; onClose(): void }) 
     setName(current.name)
     setA(current.members[0].name)
     setB(current.members[1].name)
-    setConfirmReset(false)
   }, [open])
 
   const save = () => {
@@ -109,28 +106,71 @@ export function Settings({ open, onClose }: { open: boolean; onClose(): void }) 
             </button>
           </div>
         )}
-        {mode === 'local' && (
-          <div className="danger-zone">
-            {confirmReset ? (
-              <>
-                <p>This clears every recipe, memory and mile on this phone. It can't be undone.</p>
-                <div className="row-2">
-                  <button className="btn" onClick={() => setConfirmReset(false)}>
-                    Keep my island
-                  </button>
-                  <button className="btn danger" onClick={resetIsland}>
-                    Start over
-                  </button>
-                </div>
-              </>
-            ) : (
-              <button className="btn ghost small" onClick={() => setConfirmReset(true)}>
-                Start a new island…
-              </button>
-            )}
-          </div>
-        )}
+        <CloseIsland key={String(open)} />
       </div>
     </Sheet>
+  )
+}
+
+/** Deleting the island for good, behind typing its name, e.g. if the two of you go separate ways. */
+function CloseIsland() {
+  const island = useIsland((s) => s.island)!
+  const mode = useIsland((s) => s.mode)
+  const deleteIsland = useIsland((s) => s.deleteIsland)
+  const [open, setOpen] = useState(false)
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const matches = typed.trim() === island.name.trim()
+
+  if (!open) {
+    return (
+      <div className="danger-zone">
+        <button type="button" className="btn ghost small" onClick={() => setOpen(true)}>
+          Close this island…
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="danger-zone card">
+      <h3>Close {island.name}</h3>
+      <p>
+        {mode === 'cloud'
+          ? `This deletes the island for both of you: every memory, photo, recipe, reward and mile. It can't be undone.`
+          : `This deletes every memory, recipe, reward and mile on this phone. It can't be undone.`}
+      </p>
+      <label className="form">
+        <span>
+          Type <b>{island.name}</b> to confirm
+        </span>
+        <input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} />
+      </label>
+      <div className="row-2">
+        <button type="button" className="btn" onClick={() => setOpen(false)} disabled={busy}>
+          Keep it
+        </button>
+        <button
+          type="button"
+          className="btn danger"
+          disabled={!matches || busy}
+          onClick={async () => {
+            setBusy(true)
+            setError('')
+            try {
+              await deleteIsland()
+            } catch (err) {
+              console.error(err)
+              setError("The island couldn't be closed. Check your connection and try again.")
+              setBusy(false)
+            }
+          }}
+        >
+          {busy ? 'Closing…' : 'Delete forever'}
+        </button>
+      </div>
+      {error && <p className="form-error">{error}</p>}
+    </div>
   )
 }
