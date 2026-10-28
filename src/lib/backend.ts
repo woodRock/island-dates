@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   getAuth,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
@@ -78,6 +79,8 @@ export interface Cloud {
   signInWithGoogle(): Promise<void>
   signIn(email: string, password: string): Promise<void>
   register(email: string, password: string, name: string): Promise<void>
+  /** Emails a link for choosing a new password, which returns to the app afterwards. */
+  resetPassword(email: string): Promise<void>
   signOut(): Promise<void>
   myIslandId(uid: string): Promise<string | null>
   createIsland(user: User, island: Omit<Island, 'memberUids' | 'inviteCode'>, contents: IslandContents): Promise<string>
@@ -150,6 +153,7 @@ function cloudBackend(app: FirebaseApp): Cloud {
       const { user } = await createUserWithEmailAndPassword(auth, email, pw)
       if (name) await updateProfile(user, { displayName: name })
     },
+    resetPassword: (email) => sendPasswordResetEmail(auth, email, { url: location.origin + import.meta.env.BASE_URL }),
     signOut: () => signOut(auth),
 
     async myIslandId(uid) {

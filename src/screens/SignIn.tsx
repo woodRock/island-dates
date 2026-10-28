@@ -13,6 +13,8 @@ const MESSAGES: Record<string, string> = {
   'auth/popup-closed-by-user': '',
   'auth/cancelled-popup-request': '',
   'auth/network-request-failed': "I can't reach the airport right now. Check your connection?",
+  'auth/missing-email': 'Pop your email address in first.',
+  'auth/too-many-requests': "That's a lot of tries! Wait a few minutes, then have another go.",
   'auth/unauthorized-domain': "This web address isn't allowed to sign in yet (add it under Firebase Auth → Authorized domains).",
 }
 const authMessage = (err: unknown) => {
@@ -22,12 +24,19 @@ const authMessage = (err: unknown) => {
 
 export function SignIn() {
   const { season, tod } = useClock()
-  const [mode, setMode] = useState<'choose' | 'signIn' | 'register'>('choose')
+  const [mode, setMode] = useState<'choose' | 'signIn' | 'register' | 'reset'>('choose')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [resetSent, setResetSent] = useState(false)
+
+  const go = (next: typeof mode) => {
+    setMode(next)
+    setError('')
+    setResetSent(false)
+  }
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true)
@@ -43,6 +52,13 @@ export function SignIn() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    if (mode === 'reset') {
+      void run(async () => {
+        await cloud!.resetPassword(email.trim())
+        setResetSent(true)
+      })
+      return
+    }
     void run(() => (mode === 'register' ? cloud!.register(email.trim(), password, name.trim()) : cloud!.signIn(email.trim(), password)))
   }
 
@@ -62,14 +78,37 @@ export function SignIn() {
               Continue with Google
             </button>
             <div className="row-2">
-              <button className="btn" onClick={() => setMode('signIn')}>
+              <button className="btn" onClick={() => go('signIn')}>
                 Email sign in
               </button>
-              <button className="btn" onClick={() => setMode('register')}>
+              <button className="btn" onClick={() => go('register')}>
                 New account
               </button>
             </div>
           </>
+        ) : mode === 'reset' ? (
+          <form className="form" onSubmit={submit}>
+            {resetSent ? (
+              <p className="notice">
+                If there's an account for <b>{email.trim()}</b>, a link to choose a new password is on its way. It can take a minute, so check
+                your spam folder too.
+              </p>
+            ) : (
+              <>
+                <p className="hint">Enter your email and I'll send you a link to choose a new password.</p>
+                <label>
+                  <span>Email</span>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" autoFocus />
+                </label>
+                <button className="btn primary big" disabled={busy || !email.trim()}>
+                  {busy ? 'Sending…' : 'Send reset link'}
+                </button>
+              </>
+            )}
+            <button type="button" className="btn ghost small" onClick={() => go('signIn')}>
+              Back to sign in
+            </button>
+          </form>
         ) : (
           <form className="form" onSubmit={submit}>
             {mode === 'register' && (
@@ -94,7 +133,12 @@ export function SignIn() {
             <button className="btn primary big" disabled={busy || !email.trim() || !password}>
               {mode === 'register' ? 'Create account' : 'Sign in'}
             </button>
-            <button type="button" className="btn ghost small" onClick={() => setMode('choose')}>
+            {mode === 'signIn' && (
+              <button type="button" className="btn ghost small" onClick={() => go('reset')}>
+                Forgot password?
+              </button>
+            )}
+            <button type="button" className="btn ghost small" onClick={() => go('choose')}>
               Back
             </button>
           </form>
